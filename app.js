@@ -39,7 +39,7 @@ app.post('/reels', reels.single('video'), async (req, res) => {
     res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
   } catch (error) {
     console.error('Error uploading file:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: error });
   }
 });
 
@@ -57,7 +57,7 @@ app.post('/videos', videos.single('video'), async (req, res) => {
     res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
   } catch (error) {
     console.error('Error uploading file:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: error });
   }
 });
 
