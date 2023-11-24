@@ -62,7 +62,7 @@ app.post('/videos', videos.single('video'), async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('Hello');
+  res.send('WHILE 00');
 });
 
 app.listen(port, () => {
