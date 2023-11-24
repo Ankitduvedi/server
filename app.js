@@ -4,7 +4,7 @@ const AWS = require('aws-sdk');
 const multerS3 = require('multer-s3');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 2000;
 
 // Configure AWS SDK
 AWS.config.update({
