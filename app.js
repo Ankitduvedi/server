@@ -4,7 +4,7 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { fromIni } = require('@aws-sdk/credential-provider-ini');
 
 const app = express();
-const port = process.env.PORT || 2000;
+const port = process.env.PORT || 3000;
 
 // Configure AWS SDK v3
 const s3Client = new S3Client({
