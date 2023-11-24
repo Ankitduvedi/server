@@ -1,26 +1,27 @@
 const express = require('express');
 const multer = require('multer');
-const AWS = require('aws-sdk');
-const multerS3 = require('multer-s3');
+const { S3Client } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
+const { fromIni } = require('@aws-sdk/credential-provider-ini');
 
 const app = express();
 const port = process.env.PORT || 2000;
 
-// Configure AWS SDK
-AWS.config.update({
-  accessKeyId: 'AKIAQFH76463TX4YV5LT',
-  secretAccessKey: 'jI2Ps2lzxy2QtyeoH7da1SvFgHTfsKI7R6IdmmAM',
-  region: 'ap-south-1', // e.g., 'us-east-1'
+// Configure AWS SDK v3
+const s3Client = new S3Client({
+  region: 'ap-south-1', // Replace with your desired AWS region
+  credentials: fromIni({
+    accessKeyId: 'AKIAQFH76463TX4YV5LT',
+    secretAccessKey: 'jI2Ps2lzxy2QtyeoH7da1SvFgHTfsKI7R6IdmmAM',
+  }),
 });
-
-const s3 = new AWS.S3();
 
 // Configure multer and multer-s3 to handle file uploads to S3
 const reels = multer({
   storage: multerS3({
-    s3: s3,
+    s3: s3Client,
     bucket: 'nodejs1532',
-    acl: 'public-read', // Set ACL to public-read for public access
+    acl: 'public-read',
     key: function (req, file, cb) {
       cb(null, 'reels/' + Date.now().toString() + '-' + file.originalname);
     },
@@ -29,9 +30,9 @@ const reels = multer({
 
 const videos = multer({
   storage: multerS3({
-    s3: s3,
+    s3: s3Client,
     bucket: 'nodejs1532',
-    acl: 'public-read', // Set ACL to public-read for public access
+    acl: 'public-read',
     key: function (req, file, cb) {
       cb(null, 'videos/' + Date.now().toString() + '-' + file.originalname);
     },
@@ -39,16 +40,44 @@ const videos = multer({
 });
 
 // Set up a simple endpoint for handling video uploads
-app.post('/reels', reels.single('video'), (req, res) => {
+app.post('/reels', reels.single('video'), async (req, res) => {
+  try {
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: 'nodejs1532',
+        Key: 'reels/' + Date.now().toString() + '-' + req.file.originalname,
+        Body: req.file.buffer,
+        ACL: 'public-read',
+      },
+    });
 
-  // You can send a response to the client or perform additional tasks here
-  res.json( req.file.location );
+    const result = await upload.done();
+    res.json(result.Location);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-app.post('/videos', videos.single('video'), (req, res) => {
+app.post('/videos', videos.single('video'), async (req, res) => {
+  try {
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: 'nodejs1532',
+        Key: 'videos/' + Date.now().toString() + '-' + req.file.originalname,
+        Body: req.file.buffer,
+        ACL: 'public-read',
+      },
+    });
 
-  // You can send a response to the client or perform additional tasks here
-  res.json( req.file.location );
+    const result = await upload.done();
+    res.json(result.Location);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
 app.get('/', (req, res) => {
@@ -56,5 +85,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${process.env.PORT}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
