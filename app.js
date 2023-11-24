@@ -9,62 +9,41 @@ const port = process.env.PORT || 3000;
 // Configure AWS SDK v3
 const s3Client = new S3Client({
   region: 'ap-south-1', // Replace with your desired AWS region
-  credentials: fromIni({
-    accessKeyId: 'AKIAQFH76463TX4YV5LT',
-    secretAccessKey: 'jI2Ps2lzxy2QtyeoH7da1SvFgHTfsKI7R6IdmmAM',
-  }),
+  credentials: fromIni(), // Automatically uses IAM role or credentials in environment variables
 });
 
-// Configure multer and multer-s3 to handle file uploads to S3
-const reels = multer({
-  storage: multer.memoryStorage(),
-});
+// Configure multer to handle file uploads
+const upload = multer();
 
-const videos = multer({
-  storage: multer.memoryStorage(),
-});
-
-// Set up a simple endpoint for handling video uploads
-app.post('/reels', reels.single('video'), async (req, res) => {
+// Set up a simple endpoint for handling file uploads to S3
+app.post('/upload', upload.single('file'), async (req, res) => {
   try {
-    const uploadParams = {
-      Bucket: 'nodejs1532',
-      Key: 'reels/' + Date.now().toString() + '-' + req.file.originalname,
-      Body: req.file.buffer,
-      ACL: 'public-read',
-    };
-
-    await s3Client.send(new PutObjectCommand(uploadParams));
+    // Get file data from the request
+    const file = req.file;
     
-    res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({ error: error });
-  }
-});
-
-app.post('/videos', videos.single('video'), async (req, res) => {
-  try {
+    // Specify S3 upload parameters
     const uploadParams = {
-      Bucket: 'nodejs1532',
-      Key: 'videos/' + Date.now().toString() + '-' + req.file.originalname,
-      Body: req.file.buffer,
+      Bucket: 'your-s3-bucket-name', // Replace with your S3 bucket name
+      Key: `uploads/${Date.now()}-${file.originalname}`,
+      Body: file.buffer,
       ACL: 'public-read',
     };
 
+    // Upload the file to S3
     await s3Client.send(new PutObjectCommand(uploadParams));
 
-    res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
+    // Provide a public URL for the uploaded file
+    const publicUrl = `https://your-s3-bucket-name.s3.amazonaws.com/${uploadParams.Key}`;
+    
+    // Respond with the public URL
+    res.json({ message: 'File uploaded successfully', url: publicUrl });
   } catch (error) {
     console.error('Error uploading file:', error);
-    res.status(500).json({ error: error });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('WHILE 00');
-});
-
+// Start the Express server
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${process.env.PORT}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
