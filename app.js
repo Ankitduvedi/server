@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const { S3Client } = require('@aws-sdk/client-s3');
-const { Upload } = require('@aws-sdk/lib-storage');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { fromIni } = require('@aws-sdk/credential-provider-ini');
 
 const app = express();
@@ -18,42 +17,26 @@ const s3Client = new S3Client({
 
 // Configure multer and multer-s3 to handle file uploads to S3
 const reels = multer({
-  storage: multerS3({
-    s3: s3Client,
-    bucket: 'nodejs1532',
-    acl: 'public-read',
-    key: function (req, file, cb) {
-      cb(null, 'reels/' + Date.now().toString() + '-' + file.originalname);
-    },
-  }),
+  storage: multer.memoryStorage(),
 });
 
 const videos = multer({
-  storage: multerS3({
-    s3: s3Client,
-    bucket: 'nodejs1532',
-    acl: 'public-read',
-    key: function (req, file, cb) {
-      cb(null, 'videos/' + Date.now().toString() + '-' + file.originalname);
-    },
-  }),
+  storage: multer.memoryStorage(),
 });
 
 // Set up a simple endpoint for handling video uploads
 app.post('/reels', reels.single('video'), async (req, res) => {
   try {
-    const upload = new Upload({
-      client: s3Client,
-      params: {
-        Bucket: 'nodejs1532',
-        Key: 'reels/' + Date.now().toString() + '-' + req.file.originalname,
-        Body: req.file.buffer,
-        ACL: 'public-read',
-      },
-    });
+    const uploadParams = {
+      Bucket: 'nodejs1532',
+      Key: 'reels/' + Date.now().toString() + '-' + req.file.originalname,
+      Body: req.file.buffer,
+      ACL: 'public-read',
+    };
 
-    const result = await upload.done();
-    res.json(result.Location);
+    await s3Client.send(new PutObjectCommand(uploadParams));
+    
+    res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -62,18 +45,16 @@ app.post('/reels', reels.single('video'), async (req, res) => {
 
 app.post('/videos', videos.single('video'), async (req, res) => {
   try {
-    const upload = new Upload({
-      client: s3Client,
-      params: {
-        Bucket: 'nodejs1532',
-        Key: 'videos/' + Date.now().toString() + '-' + req.file.originalname,
-        Body: req.file.buffer,
-        ACL: 'public-read',
-      },
-    });
+    const uploadParams = {
+      Bucket: 'nodejs1532',
+      Key: 'videos/' + Date.now().toString() + '-' + req.file.originalname,
+      Body: req.file.buffer,
+      ACL: 'public-read',
+    };
 
-    const result = await upload.done();
-    res.json(result.Location);
+    await s3Client.send(new PutObjectCommand(uploadParams));
+
+    res.json(`https://nodejs1532.s3.amazonaws.com/${uploadParams.Key}`);
   } catch (error) {
     console.error('Error uploading file:', error);
     res.status(500).json({ error: 'Internal Server Error' });
